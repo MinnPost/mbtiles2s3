@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+
+#
+# mbtiles2s3 reads in a MBTiles file and exports to S3
+#
+
+import logging, os, sys
+import urllib
+import boto
+from optparse import OptionParser
+
+
+# Class for tool
+class MBTiles2S3():
+  usage = """
+  %prog [options] source.mbtiles s3bucket [s3path]
+
+  Examples:
+
+  Export an mbtiles file to an S3 bucket:
+  $ %prog world.mbtiles bucket.example
+
+  Export an mbtiles file to an S3 bucket and path:
+  $ %prog world.mbtiles bucket.example path/to/tiles
+
+  Use a Mapbox box directly to an S3 bucket and path:
+  $ %prog -m mapbox_user.map_id bucket.example path/to/tiles
+
+
+  Requirements:
+
+  It is expected to have AWS credentials set as AWS_ACCESS_KEY_ID and
+  AWS_SECRET_ACCESS_KEY.  These can be set on the command line like:
+
+    export AWS_ACCESS_KEY_ID="xxxxx";
+    export AWS_SECRET_ACCESS_KEY="xxxx";
+  """
+
+  default_acl = 'public-read'
+
+
+  # Std out
+  def out(self, message):
+    sys.stdout.write(message)
+
+
+  # Std error
+  def error(self, message):
+    sys.stderror.write(message)
+
+
+  # Connect to S3
+  def connect_s3(self):
+    self.out('Creating connection to S3 and making bucket.\n')
+    self.s3 = boto.connect_s3()
+    self.bucket = self.s3.create_bucket(self.bucket_name)
+    self.bucket.set_acl(self.default_acl)
+
+
+  # Get file from Mapbox
+  def get_mapbox_mbtiles(self):
+    mapbox_mbtiles = 'http://a.tiles.mapbox.com/v3/%s.mbtiles'
+    local_mbtiles = '%s.mbtiles'
+    remote_file = mapbox_mbtiles % (self.source)
+    local_file = local_mbtiles % (self.source)
+
+    # Check if file exists already
+    if os.path.exists(local_file) and os.path.isfile(local_file):
+      self.out('Local file, %s, already exists, using this file.\n' % (local_file))
+    else:
+      self.out('Downloading file from Mapbox ...\n')
+      urllib.urlretrieve (remote_file, local_file)
+
+    self.source = local_file
+
+
+  # Main execution
+  def main(self):
+    # Main program
+    parser = OptionParser(usage = self.usage)
+
+    # Option to use Mapbox file
+    parser.add_option(
+      '-m', '--mapbox-source',
+      action = 'store_true',
+      help = 'Use this flag to interpret the source as a Mapbox map, usually in the format of `user.map_id`.'
+    )
+
+    # Turn on debugging
+    parser.add_option(
+      '-d', '--debug',
+      action = 'store_true',
+      help = 'Turn on debugging.'
+    )
+
+    # Option to add jsonp wrapper
+    parser.add_option(
+      '-g', '--grid-callback',
+      dest = 'callback',
+      help = 'Option to control JSONP callback for UTFGrid tiles.',
+      default = ''
+    )
+
+    # Parse options
+    (options, args) = parser.parse_args()
+
+    # Debugging
+    if options.debug:
+      logging.basicConfig(level = logging.DEBUG)
+
+    # Ensure we have two arguments
+    if len(args) < 2:
+      sys.stderr.write('Two arguments are required.\n\n')
+      parser.print_help()
+      sys.exit(1)
+
+    # Get base options
+    self.source = args[0]
+    self.bucket_name = args[1]
+    self.path = args[2] if 2 in args else None
+
+    # If mapbox option, handle that
+    if options.mapbox_source:
+      self.get_mapbox_mbtiles()
+
+    # Ensure that the file exists
+    if not os.path.exists(self.source) or not os.path.isfile(self.source):
+      self.error('The source file is not a file or does not exist.\n')
+      sys.exit(1)
+
+    # Ensure that we have AWS credentials set up
+    if 'AWS_ACCESS_KEY_ID' not in os.environ or 'AWS_SECRET_ACCESS_KEY' not in os.environ:
+      self.error('AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY not found in the environment.\n')
+      sys.exit(1)
+
+    # Make initial connection to S3
+    self.connect_s3()
+
+
+
+# Handle execution
+if __name__ == '__main__':
+  mbtiles2s3 = MBTiles2S3()
+  mbtiles2s3.main();
