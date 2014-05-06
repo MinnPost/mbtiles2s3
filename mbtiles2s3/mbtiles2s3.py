@@ -196,7 +196,7 @@ requirements:
       grid['data'] = grid_data_parse
 
       # Upload data
-      (grid, mim_type) = self.jsonp(grid)
+      (grid, mime_type) = self.jsonp(grid)
       self.send_file(key, grid, mime_type = mime_type)
 
       # Get next and update
@@ -223,6 +223,34 @@ requirements:
 
     self.send_file(key, file = self.source, cb = report_progress, mime_type = mime_mbtiles)
     progress.finish()
+
+
+  def remove_export(self):
+    """
+    Removes export of same name.
+    """
+    prefix = self.path + '/' if self.path else ''
+    tiles_path = '%s%s' % (prefix, self.tileset)
+    metadata_path = '%s%s.json' % (prefix, self.tileset)
+    mbtiles_path = '%s%s.mbtiles' % (prefix, self.tileset)
+
+    # Get list for tiles
+    tiles_path_set = self.bucket.list(prefix = tiles_path)
+
+    # Progress
+    widgets = ['- Removing old export, %s: ' % (self.tileset), progressbar.Percentage()]
+    progress = progressbar.ProgressBar(widgets = widgets, maxval = 1).start()
+
+    # Remove parts
+    self.bucket.delete_keys([key.name for key in tiles_path_set])
+    self.bucket.delete_key(tiles_path)
+    progress.update(.5)
+    self.bucket.delete_key(metadata_path)
+    progress.update(.25)
+    self.bucket.delete_key(mbtiles_path)
+    progress.update(.25)
+    progress.finish()
+
 
 
   def get_mapbox_mbtiles(self):
@@ -290,26 +318,33 @@ requirements:
     parser.add_argument(
       '-m', '--mapbox-source',
       action = 'store_true',
-      help = 'Use this flag to interpret the source as a Mapbox map, usually in the format of `user.map_id`.'
+      help = 'Interpret the source as a Mapbox map, usually in the format of `user.map_id`.'
+    )
+
+    # Remove old parts
+    parser.add_argument(
+      '-r', '--remove-first',
+      action = 'store_true',
+      help = 'Remove old files first.  This is good if for some reason the map boundary has changed.'
     )
 
     # Do not upload mbtiles
     parser.add_argument(
-      '-u', '--dont-upload-mbtiles',
+      '--dont-upload-mbtiles',
       action = 'store_true',
       help = 'Do not upload the original mbtiles file.  This is desierable for archivable purposes.'
     )
 
     # Do not upload image tiles
     parser.add_argument(
-      '-i', '--dont-upload-image-tiles',
+      '--dont-upload-image-tiles',
       action = 'store_true',
       help = 'Do not upload the image tiles.'
     )
 
     # Do not upload grid tiles
     parser.add_argument(
-      '-r', '--dont-upload-grid-tiles',
+      '--dont-upload-grid-tiles',
       action = 'store_true',
       help = 'Do not upload the grid tiles.'
     )
@@ -361,6 +396,10 @@ requirements:
 
     # Make initial connection to mbtiles
     self.connect_mbtiles()
+
+    # Remove first
+    if self.args.remove_first:
+      self.remove_export()
 
     # Upload metadata
     self.mbtiles_metadata()
