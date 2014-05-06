@@ -196,7 +196,8 @@ requirements:
       grid['data'] = grid_data_parse
 
       # Upload data
-      self.send_file(key, self.jsonp(grid))
+      (grid, mim_type) = self.jsonp(grid)
+      self.send_file(key, grid, mime_type = mime_type)
 
       # Get next and update
       t = tiles.fetchone()
@@ -220,7 +221,7 @@ requirements:
     def report_progress(complete, total):
       progress.update(float(complete) / float(total))
 
-    self.send_file(key, file = self.source, cb = report_progress)
+    self.send_file(key, file = self.source, cb = report_progress, mime_type = mime_mbtiles)
     progress.finish()
 
 
