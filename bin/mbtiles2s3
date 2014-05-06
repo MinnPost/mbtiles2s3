@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+from mbtiles2s3 import MBTiles2S3
+
+if __name__ == '__main__':
+  mbtiles2s3 = MBTiles2S3()
