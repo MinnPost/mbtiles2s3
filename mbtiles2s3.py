@@ -6,28 +6,26 @@
 
 import logging, os, sys
 import urllib
+import argparse
 import boto
-from optparse import OptionParser
 
 
 # Class for tool
 class MBTiles2S3():
-  usage = """
-  %prog [options] source.mbtiles s3bucket [s3path]
-
-  Examples:
+  description = """
+examples:
 
   Export an mbtiles file to an S3 bucket:
-  $ %prog world.mbtiles bucket.example
+  $ mbtiles2s3 world.mbtiles bucket.example
 
   Export an mbtiles file to an S3 bucket and path:
-  $ %prog world.mbtiles bucket.example path/to/tiles
+  $ mbtiles2s3 world.mbtiles bucket.example -p path/to/tiles
 
   Use a Mapbox box directly to an S3 bucket and path:
-  $ %prog -m mapbox_user.map_id bucket.example path/to/tiles
+  $ mbtiles2s3 -m mapbox_user.map_id bucket.example -p path/to/tiles
 
 
-  Requirements:
+requirements:
 
   It is expected to have AWS credentials set as AWS_ACCESS_KEY_ID and
   AWS_SECRET_ACCESS_KEY.  These can be set on the command line like:
@@ -77,50 +75,65 @@ class MBTiles2S3():
   # Main execution
   def main(self):
     # Main program
-    parser = OptionParser(usage = self.usage)
+    parser = argparse.ArgumentParser(description = self.description, formatter_class = argparse.RawDescriptionHelpFormatter,)
+
+    # Source
+    parser.add_argument(
+      'source',
+      help = 'The .mbtiles file source.  If used with the --mapbox-source flag, then this should be a Mapbox map identifier.'
+    )
+
+    # Bucket
+    parser.add_argument(
+      'bucket',
+      help = 'The S3 bucket to send to.'
+    )
+
+    # Bucket path
+    parser.add_argument(
+      '-p', '--path',
+      dest = 'path',
+      help = 'Path in bucket to send to.',
+      default = ''
+    )
+
+    # Option to add jsonp wrapper
+    parser.add_argument(
+      '-g', '--grid-callback',
+      dest = 'callback',
+      help = 'Option to control JSONP callback for UTFGrid tiles.  Defaults to `grid`, use blank to remove JSONP',
+      default = 'grid'
+    )
 
     # Option to use Mapbox file
-    parser.add_option(
+    parser.add_argument(
       '-m', '--mapbox-source',
       action = 'store_true',
       help = 'Use this flag to interpret the source as a Mapbox map, usually in the format of `user.map_id`.'
     )
 
     # Turn on debugging
-    parser.add_option(
+    parser.add_argument(
       '-d', '--debug',
       action = 'store_true',
       help = 'Turn on debugging.'
     )
 
-    # Option to add jsonp wrapper
-    parser.add_option(
-      '-g', '--grid-callback',
-      dest = 'callback',
-      help = 'Option to control JSONP callback for UTFGrid tiles.',
-      default = ''
-    )
-
     # Parse options
-    (options, args) = parser.parse_args()
+    args = parser.parse_args()
+
+    # Set some properties
+    self.args = args
+    self.source = args.source
+    self.bucket_name = args.bucket
+    self.path = args.path
 
     # Debugging
-    if options.debug:
+    if self.args.debug:
       logging.basicConfig(level = logging.DEBUG)
 
-    # Ensure we have two arguments
-    if len(args) < 2:
-      sys.stderr.write('Two arguments are required.\n\n')
-      parser.print_help()
-      sys.exit(1)
-
-    # Get base options
-    self.source = args[0]
-    self.bucket_name = args[1]
-    self.path = args[2] if 2 in args else None
-
     # If mapbox option, handle that
-    if options.mapbox_source:
+    if self.args.mapbox_source:
       self.get_mapbox_mbtiles()
 
     # Ensure that the file exists
