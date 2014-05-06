@@ -120,14 +120,14 @@ requirements:
     """
     Make data into JSON and wrap if needed.
     """
-    metadata = json.dumps(self.metadata, sort_keys = True)
+    json_string = json.dumps(content, sort_keys = True)
     mime_type = self.mime_json
 
     if self.args.callback is not None and self.args.callback != '':
-      metadata = '%s(%s);' % (self.args.callback, metadata)
+      json_string = '%s(%s);' % (self.args.callback, json_string)
       mime_type = self.mime_jsonp
 
-    return (metadata, mime_type)
+    return (json_string, mime_type)
 
 
   def mbtiles_metadata(self):
@@ -221,7 +221,7 @@ requirements:
     def report_progress(complete, total):
       progress.update(float(complete) / float(total))
 
-    self.send_file(key, file = self.source, cb = report_progress, mime_type = mime_mbtiles)
+    self.send_file(key, file = self.source, cb = report_progress, mime_type = self.mime_mbtiles)
     progress.finish()
 
 
