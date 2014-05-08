@@ -2,6 +2,8 @@
 
 A simple command line tool to export MBTiles to an S3 location.
 
+This tool's main goal is to archive an MBTiles format while being a single command solution.  Specifically we wanted to move maps that will not change or get any significant traffic away from Mapbox to save money.  This tool has not been tweaked for speed, but this will happen if more time can be devoted to improving this or pull requests come in.
+
 ## Install
 
     git clone https://github.com/MinnPost/mbtiles2s3.git;
