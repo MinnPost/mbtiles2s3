@@ -8,10 +8,6 @@ A simple command line tool to export MBTiles to an S3 location.
     cd mbtiles2s3;
     python setup.py install;
 
-## Usage
-
-    mbtiles2s3 source bucket [options]
-
 ## Requirements
 
 In order to upload to S3, you will need to set your AWS credentials.
@@ -19,21 +15,66 @@ In order to upload to S3, you will need to set your AWS credentials.
     export AWS_ACCESS_KEY_ID="xxxxx";
     export AWS_SECRET_ACCESS_KEY="xxxx";
 
-### Examples
+## Usage
 
-Export an mbtiles files to a bucket.
+Output from `mbtiles2s3 --help`:
 
-    mbtiles2s3 ./world.mbtiles bucket.example
 
-Export an mbtiles files to a sub directory within a bucket.
+    usage: mbtiles2s3.py [-h] [-p PATH] [-g CALLBACK] [-t TILESET_NAME] [-m] [-r]
+                         [--dont-upload-mbtiles] [--dont-upload-image-tiles]
+                         [--dont-upload-grid-tiles] [-d]
+                         source bucket
 
-    mbtiles2s3 ./world.mbtiles bucket.example -p tiles-subdirectory
+    examples:
 
-A convenient method for getting a Mapbox mbtiles can be use, just use your map ID as the source
+      Export an mbtiles file to an S3 bucket:
+      $ mbtiles2s3 world.mbtiles bucket.example
 
-    mbtiles2s3 user-account.map-id bucket.example -m
+      Export an mbtiles file to an S3 bucket and path:
+      $ mbtiles2s3 world.mbtiles bucket.example -p path/to/tiles
 
-### Final structure
+      Use a Mapbox box directly to an S3 bucket and path:
+      $ mbtiles2s3 -m mapbox_user.map_id bucket.example -p path/to/tiles
+
+    requirements:
+
+      It is expected to have AWS credentials set as AWS_ACCESS_KEY_ID and
+      AWS_SECRET_ACCESS_KEY.  These can be set on the command line like:
+
+        export AWS_ACCESS_KEY_ID="xxxxx";
+        export AWS_SECRET_ACCESS_KEY="xxxx";
+
+
+    positional arguments:
+      source                The .mbtiles file source. If used with the --mapbox-
+                            source flag, then this should be a Mapbox map
+                            identifier.
+      bucket                The S3 bucket to send to.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATH, --path PATH  Path in bucket to send to.
+      -g CALLBACK, --grid-callback CALLBACK
+                            Control JSONP callback for UTFGrid tiles. Defaults to
+                            `grid`, use blank to remove JSONP
+      -t TILESET_NAME, --tileset-name TILESET_NAME
+                            The name of the tileset to use. By default, this will
+                            be the file name of the source.
+      -m, --mapbox-source   Interpret the source as a Mapbox map, usually in the
+                            format of `user.map_id`.
+      -r, --remove-first    Remove old files first. This is good if for some
+                            reason the map boundary has changed.
+      --dont-upload-mbtiles
+                            Do not upload the original mbtiles file. This is
+                            desierable for archivable purposes.
+      --dont-upload-image-tiles
+                            Do not upload the image tiles.
+      --dont-upload-grid-tiles
+                            Do not upload the grid tiles.
+      -d, --debug           Turn on debugging.
+
+
+## Final structure
 
 Given the name of your mbtiles file is `world-example.mbtiles`, you will end up with the following in your bucket within the path if it is specified:
 
