@@ -5,6 +5,12 @@ mbtiles2s3 reads in a MBTiles file and exports to S3
 """
 
 import logging, os, sys, json, urllib, argparse, sqlite3, zlib
+
+# Eventlet
+import eventlet
+# http://eventlet.net/doc/patching.html#monkeypatching-the-standard-library
+eventlet.monkey_patch()
+
 import progressbar
 import boto
 from boto.s3.cors import CORSConfiguration
@@ -152,19 +158,23 @@ requirements:
     progress = progressbar.ProgressBar(widgets = widgets, maxval = tile_count).start()
     completed = 0
 
+    # Create eventlet pile
+    pile = eventlet.GreenPile(self.args.concurrency)
+
     # Get tiles
     tiles = self.mbtiles.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
       key = '%s/%s/%s/%s.png' % (self.tileset, t[0], t[1], t[2])
-      self.send_file(key, t[3])
+      pile.spawn(self.send_file, key, t[3])
 
       # Get next and update
       t = tiles.fetchone()
       completed = completed + 1
       progress.update(completed)
 
-    # Stop progress bar
+    # Wait for pile and stop progress bar
+    list(pile)
     progress.finish()
 
 
@@ -178,6 +188,9 @@ requirements:
     widgets = ['- Uploading %s grid tiles: ' % (tile_count), progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()]
     progress = progressbar.ProgressBar(widgets = widgets, maxval = tile_count).start()
     completed = 0
+
+    # Create eventlet pile
+    pile = eventlet.GreenPile(self.args.concurrency)
 
     # Get tiles
     tiles = self.mbtiles.execute('select zoom_level, tile_column, tile_row, grid from grids;')
@@ -197,14 +210,15 @@ requirements:
 
       # Upload data
       (grid, mime_type) = self.jsonp(grid)
-      self.send_file(key, grid, mime_type = mime_type)
+      pile.spawn(self.send_file, key, grid, mime_type = mime_type)
 
       # Get next and update
       t = tiles.fetchone()
       completed = completed + 1
       progress.update(completed)
 
-    # Stop progress bar
+    # Wait for pile and stop progress bar
+    list(pile)
     progress.finish()
 
 
@@ -312,6 +326,15 @@ requirements:
       dest = 'tileset_name',
       help = 'The name of the tileset to use.  By default, this will be the file name of the source.',
       default = ''
+    )
+
+    # Concurency
+    parser.add_argument(
+      '-c', '--concurrency',
+      dest = 'concurrency',
+      help = 'Number of concurrent uploads.  Default is 32',
+      type = int,
+      default = 32
     )
 
     # Option to use Mapbox file

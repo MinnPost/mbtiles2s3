@@ -7,7 +7,8 @@ from setuptools import setup
 # Arg parse is only newly in the standard library
 install_requires = [
   'boto >= 2.27.0',
-  'progressbar >= 2.2'
+  'progressbar >= 2.2',
+  'eventlet >= 0.14.0'
 ]
 if sys.version_info < (2, 7):
   install_requires.append('argparse >= 1.2.1')
