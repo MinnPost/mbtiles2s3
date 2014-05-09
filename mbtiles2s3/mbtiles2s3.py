@@ -144,7 +144,7 @@ requirements:
     (metadata, mime_type) = self.jsonp(self.metadata)
     self.send_file(self.tileset + '.json', metadata, mime_type)
     self.send_file(self.tileset + '/metadata.json', metadata, mime_type)
-    self.out('- Uploaded metadata.\n')
+    self.out('- Uploading metadata.\n')
 
 
   def mbtiles_image_tiles(self):
@@ -228,7 +228,7 @@ requirements:
     """
     key = '%s.mbtiles' % (self.tileset)
 
-    widgets = ['- Uploading MBTile file: ', progressbar.Percentage()]
+    widgets = ['- Uploading MBTile file: ', progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()]
     progress = progressbar.ProgressBar(widgets = widgets, maxval = 1).start()
 
     # Progress callback
