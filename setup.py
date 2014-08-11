@@ -6,7 +6,7 @@ from setuptools import setup
 
 # Arg parse is only newly in the standard library
 install_requires = [
-  'boto >= 2.27.0',
+  'boto == 2.27.0',
   'progressbar >= 2.2',
   'eventlet >= 0.14.0'
 ]
