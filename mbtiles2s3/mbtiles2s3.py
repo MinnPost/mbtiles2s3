@@ -184,7 +184,7 @@ requirements:
     """
     tile_count = self.mbtiles.execute('select count(zoom_level) from grids;').fetchone()[0]
     if not tile_count > 0:
-      return false
+      return False
 
     # Progress bar
     widgets = ['- Uploading %s grid tiles: ' % (tile_count), progressbar.Percentage(), ' ', progressbar.Bar(), ' ', progressbar.ETA()]
